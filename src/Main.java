@@ -23,6 +23,7 @@ public class Main {
         Files.newDirectoryStream(Paths.get("supportFiles")).forEach(
                 path -> {
                     try {
+                        System.out.println("File: " + path.getFileName().toString());
                         ANTLRInputStream stream = new ANTLRInputStream(Files.newInputStream(path));
                         MiniJavaLexer lexer = new MiniJavaLexer(stream);
                         TokenStream tokenStream = new CommonTokenStream(lexer);
@@ -37,6 +38,13 @@ public class Main {
 //                        System.out.println("\n\n\n///////////////////////////////////////");
                         TypeCheckVisitor checker = new TypeCheckVisitor(table);
                         checker.visit(context);
+                        if (checker.getErrors().size() == 0) {
+                            System.out.println("No errors were found");
+                        } else {
+                            for (String error : checker.getErrors()) {
+                                System.out.println(error);
+                            }
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }

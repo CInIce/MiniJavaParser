@@ -6,18 +6,24 @@ import symboltable.Method;
 import symboltable.SymbolTable;
 import symboltable.Variable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
 public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
-
+    List<String> errors;
     SymbolTable symbolTable;
     symboltable.Class currentClass;
     symboltable.Method currentMethod;
 
     public TypeCheckVisitor(SymbolTable symbolTable) {
         this.symbolTable = symbolTable;
+        this.errors = new ArrayList<>();
+    }
+
+    public List<String> getErrors() {
+        return errors;
     }
 
     @Override
@@ -76,11 +82,16 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
                     for (int i = 1; i < ctx.expression().size(); i++) {
                         String paramType = visitExpression(ctx.expression(i));
                         if (!paramType.equals(visitType(args.get(i - 1).type()))) {
-                            throw new TypeNotPresentException(paramType, null);
+                            errors.add("Type not found:" + paramType);
+//                            throw new TypeNotPresentException(paramType, null);
                         }
                     }
                     return visitType(method.type());
+                } else {
+                    errors.add("Mismatch params numbers, line:" + ctx.start.getLine());
                 }
+            } else {
+                errors.add("Method " + methodName + " not found, line: " + ctx.getStart().getLine());
             }
         }
         if (ctx.expId != null) {
@@ -92,9 +103,11 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
                 } else if (currentClass.containsVar(ctx.expId.getText())) {
                     return visitType(currentClass.getVar(ctx.expId.getText()).type());
                 }
-            } else {
+            } else if (currentClass.containsVar(ctx.expId.getText())) {
                 return visitType(currentClass.getVar(ctx.expId.getText()).type());
             }
+            errors.add("Identifier " + ctx.expId.getText() + " not found, line: " + ctx.getStart().getLine());
+            return "-NOT-FOUND-";
 //            symbolTable.getClass(ctx.expId)
         }
 
@@ -122,6 +135,7 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
                     if (expType1.equals(visitExpression(ctx.opExp2)) && expType1.equals("int")) {
                         return "boolean";
                     }
+                    break;
                 case "-":
                 case "*":
                 case "+":
@@ -132,11 +146,11 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
 
                     break;
             }
+            errors.add("Illegal expression type, line: " + ctx.getStart().getLine());
         } else if (ctx.arrayExp != null) {
             if (visitExpression(ctx.indexExp).equals("int")) {
                 return getArrayType(visitExpression(ctx.arrayExp));
             }
-
         } else if (ctx.sizeExp != null) {
             if (visitExpression(ctx.sizeExp).equals("int[]")) {
                 return "int";
@@ -153,10 +167,11 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
             if (visitExpression(ctx.notExp).equals("boolean")) {
                 return "boolean";
             }
+            errors.add("Illegal expression type, line: " + ctx.getStart().getLine());
         } else if (ctx.primaryExp != null) {
             return visitExpression(ctx.primaryExp);
         }
-        return super.visitExpression(ctx);
+        return "-NOT-FOUND-";
     }
 
     @Override
@@ -174,11 +189,8 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
         }
 
         if (ctx.assignArray != null) {
-            if (currentClass.getId().equals("BBS") && currentMethod != null && currentMethod.getId().equals("Init")) {
-                boolean a = false;
-            }
             if (visitExpression(ctx.indexExp).equals("int")) {
-                String idType = null;
+                String idType = "";
                 if (currentMethod.containsParam(ctx.assignArray.getText())) {
                     idType = visitType(currentMethod.getParam(ctx.assignArray.getText()).type());
                 } else if (currentMethod.containsVar(ctx.assignArray.getText())) {
@@ -191,11 +203,12 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
                     return null;
                 }
             }
-            throw new TypeNotPresentException("This is not an int[]", null);
+            //throw new TypeNotPresentException("This is not an int[]", null);
+            errors.add("This is not an int[], line: " + ctx.getStart().getLine());
         }
 
         if (ctx.assign != null) {
-            String idType = null;
+            String idType = "";
             if (currentMethod.containsParam(ctx.assign.getText())) {
                 idType = visitType(currentMethod.getParam(ctx.assign.getText()).type());
             } else if (currentMethod.containsVar(ctx.assign.getText())) {
@@ -205,7 +218,8 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
             }
 
             if (!visitExpression(ctx.assignExp).equals(idType)) {
-                throw new TypeNotPresentException(idType, null);
+                errors.add("Type not found: " + idType + " line: " + ctx.getStart().getLine());
+                //throw new TypeNotPresentException(idType, null);
             }
         }
 
@@ -217,13 +231,17 @@ public class TypeCheckVisitor extends MiniJavaBaseVisitor<String> {
         if (ctx.getText().matches("int|boolean|int( )*\\[( )*\\]") || symbolTable.containsClass(ctx.getText())) {
             return ctx.getText();
         }
-        throw new TypeNotPresentException(ctx.getText(), null);
+        errors.add("Type not found: " + ctx.getText() + " line: " + ctx.getStart().getLine());
+//        throw new TypeNotPresentException(ctx.getText(), null);
+        return ctx.getText();
     }
 
     public String getArrayType(String type) {
         if (type.equals("int[]")) {
             return "int";
         }
-        throw new TypeNotPresentException(type, null);
+        errors.add("Object array type is not supported");
+//        throw new TypeNotPresentException(type, null);
+        return type.substring(0, type.length() - 2);
     }
 }
