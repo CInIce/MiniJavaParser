@@ -6,6 +6,7 @@ import parser.MiniJavaParser;
 import symboltable.SymbolTable;
 import visitor.PrettyPrintVisitor;
 import visitor.SymbolTableVisitor;
+import visitor.TypeCheckVisitor;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -27,14 +28,15 @@ public class Main {
                         TokenStream tokenStream = new CommonTokenStream(lexer);
                         MiniJavaParser parser = new MiniJavaParser(tokenStream);
                         MiniJavaParser.GoalContext context = parser.goal();
-//                        SymbolTableVisitor symbolTableVisitor = new SymbolTableVisitor();
-//                        symbolTableVisitor.visitGoal(context);
-//                        SymbolTable table = symbolTableVisitor.symbolTable;
-                        PrettyPrintVisitor print = new PrettyPrintVisitor();
-                        print.visitGoal(context);
-                        System.out.println(print.stringBuilder.toString());
-                        System.out.println("\n\n\n///////////////////////////////////////");
-
+                        SymbolTableVisitor symbolTableVisitor = new SymbolTableVisitor();
+                        symbolTableVisitor.visitGoal(context);
+                        SymbolTable table = symbolTableVisitor.symbolTable;
+//                        PrettyPrintVisitor print = new PrettyPrintVisitor();
+//                        print.visitGoal(context);
+//                        System.out.println(print.stringBuilder.toString());
+//                        System.out.println("\n\n\n///////////////////////////////////////");
+                        TypeCheckVisitor checker = new TypeCheckVisitor(table);
+                        checker.visit(context);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }

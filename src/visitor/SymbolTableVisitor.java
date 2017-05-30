@@ -8,7 +8,7 @@ import symboltable.SymbolTable;
 /**
  * Created by Layon on 30/04/17.
  */
-public class SymbolTableVisitor extends MiniJavaBaseVisitor<Void>{
+public class SymbolTableVisitor extends MiniJavaBaseVisitor<Void> {
     public SymbolTable symbolTable = new SymbolTable();
     String clazz;
     String method;
@@ -27,19 +27,27 @@ public class SymbolTableVisitor extends MiniJavaBaseVisitor<Void>{
 
     @Override
     public Void visitClassDeclaration(MiniJavaParser.ClassDeclarationContext ctx) {
-        symbolTable.addClass(clazz = ctx.name.IDENTIFIER().getText(), ctx.parent == null ? null:ctx.parent.IDENTIFIER().getText());
+        symbolTable.addClass(clazz = ctx.name.IDENTIFIER().getText(), ctx.parent == null ? null : ctx.parent.IDENTIFIER().getText());
         return super.visitClassDeclaration(ctx);
     }
 
     @Override
     public Void visitVarDeclaration(MiniJavaParser.VarDeclarationContext ctx) {
         Class clazz = symbolTable.getClass(this.clazz);
-        if(method == null){
+        if (method == null) {
             clazz.addVar(ctx.identifier().getText(), ctx.type());
-        }else{
+        } else {
             clazz.getMethod(method).addVar(ctx.identifier().getText(), ctx.type());
         }
-        return super.visitVarDeclaration(ctx);
+        return null;
+    }
+
+    @Override
+    public Void visitArgumentList(MiniJavaParser.ArgumentListContext ctx) {
+        for (int i = 0; i < ctx.type().size(); i++) {
+            symbolTable.getClass(clazz).getMethod(method).addParam(ctx.identifier(i).getText(), ctx.type(i));
+        }
+        return null;
     }
 
     @Override
